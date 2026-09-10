@@ -8,7 +8,7 @@ import { useMenu } from "../context/MenuContext";
 import { useOrders } from "../context/OrderContext";
 import { supabase } from "../../supabaseClient";
 import { formatBookingDate } from "../utils/specialBookings";
-import "./CustomerDashboard.css";
+import "./Customerdashboard.css";
 import "./CustomerDashboard.category.css";
 
 const CATEGORY_FILTERS = [
