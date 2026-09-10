@@ -1,0 +1,29 @@
+.dashboard__category-pills {
+  display: flex;
+  gap: 8px;
+  margin: -4px 0 4px;
+  flex-wrap: wrap;
+}
+
+.dashboard__category-pill {
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(58, 31, 18, 0.14);
+  background: #FFFDF9;
+  color: #6B4A33;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.dashboard__category-pill:hover {
+  border-color: rgba(255, 107, 53, 0.4);
+}
+
+.dashboard__category-pill--active {
+  background: linear-gradient(135deg, #FF6B35 0%, #C1440E 100%);
+  border-color: transparent;
+  color: #FFF8F0;
+}

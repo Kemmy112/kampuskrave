@@ -1,0 +1,81 @@
+/*
+  Companion stylesheet to MenuCard.css — adds category-specific variants
+  without touching any existing rule. Uses the same palette already
+  established there (#3A1F12 text, #FFFDF9/#FFF8F0 cream, #FF6B35→#C1440E
+  gradient), plus a wine/berry tint for Special dishes so they read as
+  visually distinct from same-day items.
+*/
+
+/* --- Protein: compact, image-less card --- */
+
+.menu-card--protein {
+  box-shadow: 0 6px 16px -10px rgba(193, 68, 14, 0.3);
+}
+
+.menu-card--protein.menu-card--active {
+  box-shadow: 0 10px 22px -10px rgba(193, 68, 14, 0.38);
+}
+
+.menu-card__protein-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  justify-content: center;
+}
+
+.menu-card__protein-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-card__name--protein {
+  font-size: 1.05rem;
+}
+
+.menu-card__price--inline {
+  position: static;
+  background: #3A1F12;
+}
+
+/* --- Special: wine/berry tint + Pre-order badge --- */
+
+.menu-card--special .menu-card__image-wrap {
+  background: linear-gradient(135deg, #EAD3DE 0%, #D9B8CA 100%);
+}
+
+.menu-card--special .menu-card__image--placeholder {
+  background: linear-gradient(135deg, #D9B8CA 0%, #C79FB4 100%);
+}
+
+.menu-card--special .menu-card__price {
+  background: #5C2E48;
+}
+
+.menu-card--special .menu-card__order-btn {
+  background: linear-gradient(135deg, #9A5478 0%, #5C2E48 100%);
+  box-shadow: 0 8px 18px -10px rgba(92, 46, 72, 0.6);
+}
+
+.menu-card__special-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.92);
+  color: #5C2E48;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.menu-card__description--special {
+  color: #8A5A72;
+}
