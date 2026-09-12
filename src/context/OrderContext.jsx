@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabaseClient'; // adjust path to match your project
+import { isToday } from '../utils/dateUtils';
 
 const OrderContext = createContext(null);
 
@@ -37,6 +38,15 @@ export function OrderProvider({ children }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const addOrderItem = useCallback(async (customerId, customerName, menuItem, quantity = 1) => {
+  const prev = ordersRef.current;
+  const existing = prev.find(
+    (o) =>
+      o.customerId === customerId &&
+      o.status === 'pending' &&
+      o.orderType !== 'special' &&
+      isToday(o.createdAt)
+  );
   // addOrderItem/addSpecialOrderItem need to decide, synchronously, whether
   // to insert a new row or update an existing one — before the async
   // Supabase call fires. A plain closure over `orders` would go stale, so
