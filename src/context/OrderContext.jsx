@@ -125,13 +125,14 @@ export function OrderProvider({ children }) {
     return () => clearInterval(interval);
   }, []);
 
-  function isFirstOrderFor(customerId, allOrders) {
-    return !allOrders.some(
-      (o) =>
-        o.customerId === customerId &&
-        (o.status === 'confirmed' || o.status === 'acknowledged')
-    );
-  }
+ function isFirstOrderFor(customerId, allOrders) {
+  return !allOrders.some(
+    (o) =>
+      o.customerId === customerId &&
+      o.status !== 'revoked' &&
+      (o.status === 'confirmed' || o.status === 'acknowledged' || o.isFirstOrder)
+  );
+}
 
   function mergeItems(existingItems, menuItem, quantity) {
     const lineIndex = existingItems.findIndex((i) => i.menuItemId === menuItem.id);

@@ -1,7 +1,8 @@
 import { Routes, Route } from "react-router-dom";
-import AuthPage from "./pages/AuthPage";
+import AuthPage from "./pages/AuthPage/AuthPage";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import ChefDashboard from "./pages/ChefDashboard/ChefDashboard";
+import OrdersPage from "./pages/OrdersPage";
 import { MenuProvider } from "./context/MenuContext";
 import { OrderProvider } from "./context/OrderContext";
 
@@ -13,6 +14,7 @@ export default function App() {
           <Route path="/" element={<AuthPage />} />
           <Route path="/customer" element={<CustomerDashboard />} />
           <Route path="/chef" element={<ChefDashboard />} />
+          <Route path="/orders" element={<OrdersPage />} />
         </Routes>
       </OrderProvider>
     </MenuProvider>

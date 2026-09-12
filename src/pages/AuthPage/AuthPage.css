@@ -1,0 +1,72 @@
+.authpage {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.authpage__hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px 60px;
+  background: #FF6B35;
+  color: #fff;
+  gap: 40px;
+}
+
+.authpage__form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  padding: 40px;
+}
+
+.authpage__password-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.authpage__password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #8A7B70;
+}
+
+.authpage__password-toggle:hover {
+  color: #1A1310;
+}
+
+@media (max-width: 860px) {
+  .authpage {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .authpage__hero {
+    padding: 36px 24px;
+    gap: 20px;
+  }
+
+  .authpage__hero h1 {
+    font-size: 30px !important;
+  }
+
+  .authpage__hero p {
+    font-size: 14px !important;
+  }
+
+  .authpage__form-panel {
+    padding: 32px 20px 48px;
+  }
+}

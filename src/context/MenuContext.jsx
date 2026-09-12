@@ -1,7 +1,15 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../supabaseClient'; // adjust path to match your project
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase } from '../../supabaseClient';
 
 const MenuContext = createContext(null);
+
+function todayDateString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 function rowToMenuItem(row) {
   return {
@@ -11,6 +19,7 @@ function rowToMenuItem(row) {
     price: Number(row.price),
     status: row.status,
     category: row.category,
+    menuDate: row.menu_date,
   };
 }
 
@@ -32,10 +41,6 @@ export function MenuProvider({ children }) {
     }
     fetchMenu();
 
-    // Realtime sync — this replaces the old cross-tab localStorage 'storage'
-    // event listener. Supabase pushes every insert/update/delete on `meals`
-    // to every subscribed client, so this now syncs across devices too,
-    // not just tabs in the same browser.
     const channel = supabase
       .channel('meals-changes')
       .on(
@@ -63,13 +68,17 @@ export function MenuProvider({ children }) {
     };
   }, []);
 
-  // Optimistically updates local state too, on top of the realtime push,
-  // so the person who made the change sees it instantly rather than
-  // waiting on the round trip back from Supabase.
   const addMenuItem = useCallback(async ({ name, photoUrl, price, category = 'regular' }) => {
     const { data, error } = await supabase
       .from('meals')
-      .insert({ name, photo_url: photoUrl, price: Number(price), status: 'in-stock', category })
+      .insert({
+        name,
+        photo_url: photoUrl,
+        price: Number(price),
+        status: 'in-stock',
+        category,
+        menu_date: todayDateString(),
+      })
       .select()
       .single();
 
@@ -118,17 +127,60 @@ export function MenuProvider({ children }) {
     [menu, updateMenuItem]
   );
 
+  // True when the chef never explicitly handled yesterday's leftover menu:
+  // there are dishes on the board, but none of them are dated today.
+  // This is what triggers the carry-over prompt on the chef dashboard.
+  const isMenuStale = useMemo(() => {
+    const today = todayDateString();
+    return menu.length > 0 && !menu.some((item) => item.menuDate === today);
+  }, [menu]);
+
+  // What customers should actually see — strictly today's dishes, never
+  // yesterday's leftovers, regardless of what the chef has and hasn't
+  // resolved yet.
+  const todayMenu = useMemo(() => {
+    const today = todayDateString();
+    return menu.filter((item) => item.menuDate === today);
+  }, [menu]);
+
+  // Chef chooses "keep yesterday's menu" — bump every dish's date to today
+  // so it counts as today's board without re-entering anything.
+  const retainMenuForToday = useCallback(async () => {
+    const today = todayDateString();
+    const { error } = await supabase.from('meals').update({ menu_date: today }).lt('menu_date', today);
+    if (error) {
+      console.error('Failed to retain menu:', error.message);
+      return;
+    }
+    setMenu((prev) => prev.map((item) => ({ ...item, menuDate: today })));
+  }, []);
+
+  // Chef closes the kitchen — used both for the manual "Close for today"
+  // button and for "clear it out altogether" on the carry-over prompt.
+  const clearMenu = useCallback(async () => {
+    const { error } = await supabase.from('meals').delete().not('id', 'is', null);
+    if (error) {
+      console.error('Failed to clear menu:', error.message);
+      return;
+    }
+    setMenu([]);
+  }, []);
+
   function getMenuItem(id) {
     return menu.find((item) => item.id === id);
   }
 
   const value = {
     menu,
+    todayMenu,
+    isMenuStale,
     loading,
     addMenuItem,
     updateMenuItem,
     removeMenuItem,
     toggleStatus,
+    retainMenuForToday,
+    clearMenu,
     getMenuItem,
   };
 

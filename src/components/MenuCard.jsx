@@ -109,7 +109,7 @@ function MenuCard({ dish, isActive, onPlaceOrder }) {
         )}
         {isSpecial && !dish.description && (
           <p className="menu-card__description menu-card__description--special">
-            Booked in advance — pick your delivery date at checkout.
+            Book in advance.
           </p>
         )}
         {dish.tags?.length > 0 && (

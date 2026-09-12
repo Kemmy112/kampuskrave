@@ -59,7 +59,7 @@ function SpecialOrderModal({ dish, onClose, onConfirm }) {
         </span>
 
         <h3 id="special-order-modal-title" className="special-order-modal__title">{dish.name}</h3>
-        <p className="special-order-modal__unit-price">₦{dish.price.toLocaleString()} per plate</p>
+        <p className="special-order-modal__unit-price">₦{dish.price.toLocaleString()} per serving</p>
 
         <div className="special-order-modal__field">
           <span className="special-order-modal__field-label">Plates</span>

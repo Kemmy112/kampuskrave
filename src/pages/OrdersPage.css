@@ -1,0 +1,160 @@
+.orderspage {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #FFF8F0 0%, #FFF1E0 60%, #FFEAD2 100%);
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 28px 40px 56px;
+}
+
+.orderspage__loading {
+  padding: 40px;
+  color: #6B4A33;
+  font-weight: 500;
+}
+
+.orderspage__header {
+  max-width: 900px;
+  margin: 0 auto 20px;
+}
+
+.orderspage__back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: none;
+  color: #C1440E;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.orderspage__title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: #3A1F12;
+  margin: 0 0 4px;
+}
+
+.orderspage__subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6B4A33;
+  margin: 0;
+}
+
+.orderspage__filters {
+  max-width: 900px;
+  margin: 0 auto 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.orderspage__filter-pill {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(58, 31, 18, 0.14);
+  background: #FFFDF9;
+  color: #6B4A33;
+  cursor: pointer;
+}
+
+.orderspage__filter-pill--active {
+  background: linear-gradient(135deg, #FF6B35 0%, #C1440E 100%);
+  border-color: transparent;
+  color: #FFF8F0;
+}
+
+.orderspage__empty {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 36px 20px;
+  border-radius: 16px;
+  border: 1.5px dashed #FFDCB0;
+  background: #FFFDF9;
+  color: #6B4A33;
+  text-align: center;
+  font-weight: 500;
+}
+
+.orderspage__list {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orderspage__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid #FFDCB0;
+  border-radius: 14px;
+  flex-wrap: wrap;
+}
+
+.orderspage__customer {
+  font-weight: 800;
+  font-size: 13.5px;
+  color: #C1440E;
+  margin-bottom: 2px;
+}
+
+.orderspage__items {
+  font-weight: 700;
+  font-size: 15px;
+  color: #3A1F12;
+}
+
+.orderspage__date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B4A33;
+  margin-top: 4px;
+}
+
+.orderspage__card-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.orderspage__total {
+  font-size: 14px;
+  font-weight: 800;
+  color: #3A1F12;
+}
+
+.orderspage__eta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3F6A2E;
+}
+
+@media (max-width: 640px) {
+  .orderspage {
+    padding: 20px 16px 48px;
+  }
+  .orderspage__card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .orderspage__card-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, ChefHat, ClipboardList, LogOut } from 'lucide-react';
+import { Plus, ChefHat, ClipboardList, LogOut, History } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { useOrders } from '../../context/OrderContext';
 import { supabase } from '../../../supabaseClient';
@@ -8,6 +8,9 @@ import ChefMenuCard from '../../components/ChefMenuCard/ChefMenuCard';
 import MenuItemForm from '../../components/MenuItemForm/MenuItemForm';
 import CatalogMealPicker from '../../components/CatalogMealPicker/CatalogMealPicker';
 import OrderQueueItem from '../../components/OrderQueueItem/OrderQueueItem';
+import { isToday } from '../../utils/dateUtils';
+import CarryOverModal from '../../components/CarryOverModal/CarryOverModal';
+import NotificationBell from '../../components/NotificationBell';
 import styles from './ChefDashboard.module.css';
 
 const CATEGORY_ORDER = ['regular', 'special', 'protein'];
@@ -26,7 +29,7 @@ function getGreeting() {
 
 export default function ChefDashboard({ chefName = 'Chef' }) {
   const navigate = useNavigate();
-  const { menu, addMenuItem, updateMenuItem, removeMenuItem, toggleStatus } = useMenu();
+  const { menu, addMenuItem, updateMenuItem, removeMenuItem, toggleStatus, isMenuStale, retainMenuForToday, clearMenu } = useMenu();
   const { orders, confirmOrder } = useOrders();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -37,6 +40,25 @@ export default function ChefDashboard({ chefName = 'Chef' }) {
     await supabase.auth.signOut();
     navigate('/');
   };
+
+  async function handleCloseKitchen() {
+  if (window.confirm("Close the kitchen for today? Today's menu will be cleared and customers will see you're closed.")) {
+    await clearMenu();
+  }
+}
+
+async function handleKeepMenu() {
+  await retainMenuForToday();
+}
+
+async function handleEditMenu() {
+  await retainMenuForToday();
+  openCatalog();
+}
+
+async function handleClearMenu() {
+  await clearMenu();
+}
 
   // Group today's menu by category so the chef sees Regular / Special /
   // Protein as distinct sections instead of one flat grid. Anything with
@@ -51,15 +73,23 @@ export default function ChefDashboard({ chefName = 'Chef' }) {
   }, [menu]);
 
   const activeOrders = useMemo(
-    () =>
-      [...orders]
-        .filter((o) => o.status !== 'revoked')
-        .sort((a, b) => {
-          const rank = { pending: 0, confirmed: 1, acknowledged: 2 };
-          return rank[a.status] - rank[b.status] || new Date(b.createdAt) - new Date(a.createdAt);
-        }),
-    [orders]
-  );
+  () =>
+    [...orders]
+      .filter((o) => {
+        if (o.status === 'revoked') return false;
+        // Unresolved orders (still pending confirmation, or confirmed but
+        // not yet paid/acknowledged) stay visible regardless of date —
+        // the chef still owes the customer food or a payment check.
+        // Only fully-resolved (acknowledged) orders roll off at day-change.
+        if (o.status === 'pending' || o.status === 'confirmed') return true;
+        return isToday(o.createdAt);
+      })
+      .sort((a, b) => {
+        const rank = { pending: 0, confirmed: 1, acknowledged: 2 };
+        return rank[a.status] - rank[b.status] || new Date(b.createdAt) - new Date(a.createdAt);
+      }),
+  [orders]
+);
 
   const pendingCount = activeOrders.filter((o) => o.status === 'pending').length;
 
@@ -102,18 +132,23 @@ export default function ChefDashboard({ chefName = 'Chef' }) {
           </p>
           <h1 className={styles.title}>Your kitchen today</h1>
         </div>
-        <div className={styles.headerActions}>
-          {menu.length > 0 && (
-            <button type="button" className={styles.addButton} onClick={openCatalog}>
-              <Plus size={18} strokeWidth={2.5} />
-              Add a dish
-            </button>
-          )}
-          <button type="button" className={styles.signOutButton} onClick={handleSignOut}>
-            <LogOut size={16} strokeWidth={2} />
-            Sign out
-          </button>
-        </div>
+       <div className={styles.headerActions}>
+  <NotificationBell role="chef" />
+  {menu.length > 0 && (
+    <button type="button" className={styles.addButton} onClick={openCatalog}>
+      <Plus size={18} strokeWidth={2.5} />
+      Add a dish
+    </button>
+  )}
+  <button type="button" className={styles.signOutButton} onClick={() => navigate('/orders')}>
+    <History size={16} strokeWidth={2} />
+    Order history
+  </button>
+  <button type="button" className={styles.signOutButton} onClick={handleSignOut}>
+    <LogOut size={16} strokeWidth={2} />
+    Sign out
+  </button>
+</div>
       </header>
 
       <section className={styles.section}>
@@ -194,6 +229,13 @@ export default function ChefDashboard({ chefName = 'Chef' }) {
         }}
         onSubmit={handleFormSubmit}
       />
+      {isMenuStale && (
+  <CarryOverModal
+    onKeep={handleKeepMenu}
+    onEdit={handleEditMenu}
+    onClear={handleClearMenu}
+  />
+)}
     </div>
   );
 }

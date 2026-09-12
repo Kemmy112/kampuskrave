@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ChefHat, UserRound } from "lucide-react";
+import { ChefHat, UserRound, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../supabaseClient";
+import { supabase } from "../../../supabaseClient";
+import "./AuthPage.css";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -10,13 +11,11 @@ export default function AuthPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
 
-  // Only customers type their own name at signup. There's one chef per
-  // kitchen, so that account's full_name is just hardcoded rather than
-  // making them type it every time.
   const needsNameField = mode === "signup" && role === "customer";
 
   function enterAs(selectedRole) {
@@ -39,9 +38,6 @@ export default function AuthPage() {
 
     if (signUpError) throw signUpError;
 
-    // If email confirmation is required, Supabase returns a user but no
-    // active session yet — there's nothing to navigate into until they
-    // confirm via the emailed link.
     if (data.session) {
       enterAs(role);
     } else {
@@ -57,9 +53,6 @@ export default function AuthPage() {
 
     if (signInError) throw signInError;
 
-    // Use the role stored on their profile at signup, not whatever the
-    // toggle happens to be set to right now — the toggle is only
-    // meaningful during signup, when the account doesn't exist yet.
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
@@ -99,20 +92,9 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", width: "100%" }}>
+    <div className="authpage">
       {/* Left panel — bright */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "60px 60px",
-          background: "#FF6B35",
-          color: "#fff",
-          gap: 40,
-        }}
-      >
+      <div className="authpage__hero">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ChefHat size={20} />
           <span className="font-mono" style={{ fontSize: 12, letterSpacing: 0.5 }}>
@@ -127,7 +109,16 @@ export default function AuthPage() {
           >
             Fresh as always, today's menu is ready.
           </h1>
-          <p style={{ marginTop: 18, color: "#FFE9DC", maxWidth: 400, fontSize: 15.5, lineHeight: 1.65, fontWeight: 500 }}>
+          <p
+            style={{
+              marginTop: 18,
+              color: "#FFE9DC",
+              maxWidth: 400,
+              fontSize: 15.5,
+              lineHeight: 1.65,
+              fontWeight: 500,
+            }}
+          >
             Sign in to see what's cooking today — first-time orders come with 30% off.
           </p>
         </div>
@@ -138,18 +129,12 @@ export default function AuthPage() {
       </div>
 
       {/* Right panel — form */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#fff",
-          padding: 40,
-        }}
-      >
+      <div className="authpage__form-panel">
         <div style={{ width: "100%", maxWidth: 360 }}>
-          <h2 className="font-display" style={{ fontSize: 26, fontWeight: 700, marginBottom: 4, color: "#1A1310" }}>
+          <h2
+            className="font-display"
+            style={{ fontSize: 26, fontWeight: 700, marginBottom: 4, color: "#1A1310" }}
+          >
             {mode === "signin" ? "Sign in" : "Create your account"}
           </h2>
           <p style={{ color: "#5C4E44", fontSize: 14, fontWeight: 500, marginBottom: 22 }}>
@@ -210,13 +195,25 @@ export default function AuthPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              style={inputStyle}
-              placeholder="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+
+            <div className="authpage__password-wrap">
+              <input
+                style={{ ...inputStyle, paddingRight: 40 }}
+                placeholder="Password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="authpage__password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
           </div>
 
           {error && (

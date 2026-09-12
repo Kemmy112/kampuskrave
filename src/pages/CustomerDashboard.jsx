@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChefHat, LogOut, Sparkles, Clock, CalendarClock } from "lucide-react";
+import { ChefHat, LogOut, Sparkles, Clock, CalendarClock, History } from "lucide-react";
 import MenuCarousel from "../components/MenuCarousel";
 import OrderModal from "../components/OrderModal";
 import SpecialOrderModal from "../components/SpecialOrderModal";
+import NotificationBell from "../components/NotificationBell";
 import { useMenu } from "../context/MenuContext";
 import { useOrders } from "../context/OrderContext";
 import { supabase } from "../../supabaseClient";
 import { formatBookingDate } from "../utils/specialBookings";
+import { isToday } from "../utils/dateUtils";
 import "./Customerdashboard.css";
 import "./CustomerDashboard.category.css";
 
@@ -17,6 +19,9 @@ const CATEGORY_FILTERS = [
   { key: "special", label: "Special" },
   { key: "protein", label: "Protein" },
 ];
+
+// Orders older than this stop showing on the live dashboard — they still
+// live in full on the dedicated Orders page (see OrdersPage.jsx).
 
 function naira(n) {
   return `₦${n.toLocaleString()}`;
@@ -61,8 +66,11 @@ export default function CustomerDashboard() {
   const navigate = useNavigate();
 
   // Real identity, pulled from the logged-in Supabase user + their profiles
-  // row.
+  // row. `fullName` is the raw value from the profile — used for anything
+  // that leaves this component (order records). `customerName` is the
+  // first-name-only version — used purely for on-screen greetings.
   const [customerId, setCustomerId] = useState(null);
+  const [fullName, setFullName] = useState("");
   const [customerName, setCustomerName] = useState("there");
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -87,6 +95,7 @@ export default function CustomerDashboard() {
 
       if (isMounted) {
         setCustomerId(user.id);
+        setFullName(profile?.full_name || "");
         setCustomerName(firstNameFrom(profile?.full_name));
         setProfileLoading(false);
       }
@@ -98,12 +107,11 @@ export default function CustomerDashboard() {
     };
   }, [navigate]);
 
-  // Live menu, shared with ChefDashboard via MenuContext. MenuContext stores
-  // { status: 'in-stock' | 'sold-out', photoUrl, category }, but
-  // MenuCarousel/MenuCard expect { soldOut: boolean, imageUrl, category } —
-  // map the shape here rather than touching those components.
-  const { menu: contextMenu } = useMenu();
-  const fullMenu = contextMenu.map((item) => ({
+  // Live menu, shared with ChefDashboard via MenuContext. todayMenu is
+  // already date-filtered to strictly today's dishes — customers never see
+  // yesterday's leftovers even if the chef hasn't closed out yet.
+  const { todayMenu } = useMenu();
+  const fullMenu = todayMenu.map((item) => ({
     id: item.id,
     name: item.name,
     price: item.price,
@@ -123,9 +131,14 @@ export default function CustomerDashboard() {
 
   // Live orders, shared with ChefDashboard via OrderContext.
   const { orders: contextOrders, addOrderItem, addSpecialOrderItem, acknowledgeOrder } = useOrders();
-  const orders = contextOrders
-    .filter((o) => o.customerId === customerId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const myOrders = contextOrders.filter((o) => o.customerId === customerId);
+
+  // Dashboard only shows recent activity — anything older than 24h rolls
+  // off onto the dedicated Orders page instead of piling up here.
+  const orders = myOrders
+  .filter((o) => isToday(o.createdAt))
+  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const firstTime = !contextOrders.some(
     (o) => o.customerId === customerId && (o.status === "confirmed" || o.status === "acknowledged")
@@ -144,14 +157,14 @@ export default function CustomerDashboard() {
   };
 
   const handleConfirmOrder = ({ dish, quantity }) => {
-    addOrderItem(customerId, customerName, { id: dish.id, name: dish.name, price: dish.price }, quantity);
+    addOrderItem(customerId, fullName, { id: dish.id, name: dish.name, price: dish.price }, quantity);
     setOrderingDish(null);
   };
 
   const handleConfirmSpecialOrder = ({ dish, quantity, bookingDate }) => {
     addSpecialOrderItem(
       customerId,
-      customerName,
+      fullName,
       { id: dish.id, name: dish.name, price: dish.price },
       quantity,
       bookingDate
@@ -189,9 +202,15 @@ export default function CustomerDashboard() {
           </span>
           <span className="dashboard__brand-name">Today's kitchen</span>
         </div>
-        <button className="dashboard__signout" onClick={handleSignOut}>
-          <LogOut size={14} /> Sign out
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <NotificationBell role="customer" customerId={customerId} />
+          <button className="dashboard__signout" onClick={() => navigate("/orders")}>
+            <History size={14} /> Order history
+          </button>
+          <button className="dashboard__signout" onClick={handleSignOut}>
+            <LogOut size={14} /> Sign out
+          </button>
+        </div>
       </header>
 
       <div className="dashboard__body">
@@ -220,24 +239,32 @@ export default function CustomerDashboard() {
           </span>
         </div>
 
-        <div className="dashboard__category-pills" role="tablist" aria-label="Filter menu by category">
-          {CATEGORY_FILTERS.map((filter) => (
-            <button
-              key={filter.key}
-              type="button"
-              role="tab"
-              aria-selected={categoryFilter === filter.key}
-              className={`dashboard__category-pill ${
-                categoryFilter === filter.key ? "dashboard__category-pill--active" : ""
-              }`}
-              onClick={() => setCategoryFilter(filter.key)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
+        {fullMenu.length === 0 ? (
+          <div className="dashboard__orders-empty">
+            We're closed for today — check back soon for the next menu.
+          </div>
+        ) : (
+          <>
+            <div className="dashboard__category-pills" role="tablist" aria-label="Filter menu by category">
+              {CATEGORY_FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={categoryFilter === filter.key}
+                  className={`dashboard__category-pill ${
+                    categoryFilter === filter.key ? "dashboard__category-pill--active" : ""
+                  }`}
+                  onClick={() => setCategoryFilter(filter.key)}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
 
-        <MenuCarousel dishes={menu} onPlaceOrder={handlePlaceOrderClick} />
+            <MenuCarousel dishes={menu} onPlaceOrder={handlePlaceOrderClick} />
+          </>
+        )}
 
         <h3 className="dashboard__section-title dashboard__orders-title">Your orders</h3>
 
