@@ -38,19 +38,6 @@ export function OrderProvider({ children }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const addOrderItem = useCallback(async (customerId, customerName, menuItem, quantity = 1) => {
-  const prev = ordersRef.current;
-  const existing = prev.find(
-    (o) =>
-      o.customerId === customerId &&
-      o.status === 'pending' &&
-      o.orderType !== 'special' &&
-      isToday(o.createdAt)
-  );
-  // addOrderItem/addSpecialOrderItem need to decide, synchronously, whether
-  // to insert a new row or update an existing one — before the async
-  // Supabase call fires. A plain closure over `orders` would go stale, so
-  // this ref is kept in lockstep with state and read at call time instead.
   const ordersRef = useRef(orders);
   useEffect(() => {
     ordersRef.current = orders;
@@ -60,6 +47,8 @@ export function OrderProvider({ children }) {
     let isMounted = true;
 
     async function fetchOrders() {
+      await supabase.auth.getSession();
+
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -73,9 +62,6 @@ export function OrderProvider({ children }) {
     }
     fetchOrders();
 
-    // Realtime sync — replaces the old cross-tab localStorage 'storage'
-    // listener. E.g. the chef confirming an order on one device now shows
-    // up live on the customer's device, without a manual refresh.
     const channel = supabase
       .channel('orders-changes')
       .on(
@@ -103,9 +89,6 @@ export function OrderProvider({ children }) {
     };
   }, []);
 
-  // Auto-revoke pending IMMEDIATE orders older than 4 hours — checked every
-  // minute against the in-memory list. Special (pre-booked) orders are
-  // exempt, same as before: that clock only makes sense for same-day orders.
   useEffect(() => {
     const interval = setInterval(async () => {
       const stale = ordersRef.current.filter(
@@ -116,8 +99,6 @@ export function OrderProvider({ children }) {
       );
       if (stale.length === 0) return;
 
-      // Optimistic local update so the UI reflects the revoke immediately;
-      // the realtime event that comes back afterward is a no-op merge.
       setOrders((prev) =>
         prev.map((order) =>
           stale.some((s) => s.id === order.id) ? { ...order, status: 'revoked' } : order
@@ -135,14 +116,14 @@ export function OrderProvider({ children }) {
     return () => clearInterval(interval);
   }, []);
 
- function isFirstOrderFor(customerId, allOrders) {
-  return !allOrders.some(
-    (o) =>
-      o.customerId === customerId &&
-      o.status !== 'revoked' &&
-      (o.status === 'confirmed' || o.status === 'acknowledged' || o.isFirstOrder)
-  );
-}
+  function isFirstOrderFor(customerId, allOrders) {
+    return !allOrders.some(
+      (o) =>
+        o.customerId === customerId &&
+        o.status !== 'revoked' &&
+        (o.status === 'confirmed' || o.status === 'acknowledged' || o.isFirstOrder)
+    );
+  }
 
   function mergeItems(existingItems, menuItem, quantity) {
     const lineIndex = existingItems.findIndex((i) => i.menuItemId === menuItem.id);
@@ -157,12 +138,14 @@ export function OrderProvider({ children }) {
     );
   }
 
-  // Add (or merge into) a customer's pending IMMEDIATE order — smart merge
-  // by dish, keyed on customerId (stable, unique) rather than customerName.
   const addOrderItem = useCallback(async (customerId, customerName, menuItem, quantity = 1) => {
     const prev = ordersRef.current;
     const existing = prev.find(
-      (o) => o.customerId === customerId && o.status === 'pending' && o.orderType !== 'special'
+      (o) =>
+        o.customerId === customerId &&
+        o.status === 'pending' &&
+        o.orderType !== 'special' &&
+        isToday(o.createdAt)
     );
 
     if (existing) {
@@ -211,9 +194,6 @@ export function OrderProvider({ children }) {
     );
   }, []);
 
-  // Add (or merge into) a customer's pending SPECIAL order for a given
-  // booking date. Never merges with same-day items, and only merges with
-  // an existing special order that's pending AND for the same requestedDate.
   const addSpecialOrderItem = useCallback(
     async (customerId, customerName, menuItem, quantity, requestedDate) => {
       const prev = ordersRef.current;
@@ -278,8 +258,6 @@ export function OrderProvider({ children }) {
     if (!order) return;
 
     const now = new Date();
-    // Special orders are fulfilled on requestedDate, not "90 minutes from
-    // confirmation" — that window only applies to same-day orders.
     const updates =
       order.orderType === 'special'
         ? { status: 'confirmed', confirmed_at: now.toISOString() }
@@ -308,6 +286,15 @@ export function OrderProvider({ children }) {
     );
   }, []);
 
+  const revokeOrder = useCallback(async (id) => {
+    const { error } = await supabase.from('orders').update({ status: 'revoked' }).eq('id', id);
+    if (error) {
+      console.error('Failed to revoke order:', error.message);
+      return;
+    }
+    setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status: 'revoked' } : order)));
+  }, []);
+
   const acknowledgeOrder = useCallback(async (id) => {
     const { error } = await supabase.from('orders').update({ status: 'acknowledged' }).eq('id', id);
     if (error) {
@@ -333,6 +320,7 @@ export function OrderProvider({ children }) {
     addSpecialOrderItem,
     confirmOrder,
     acknowledgeOrder,
+    revokeOrder,
     removeOrder,
   };
 

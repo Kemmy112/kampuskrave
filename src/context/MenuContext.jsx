@@ -31,6 +31,8 @@ export function MenuProvider({ children }) {
     let isMounted = true;
 
     async function fetchMenu() {
+      await supabase.auth.getSession();
+
       const { data, error } = await supabase.from('meals').select('*').order('name');
       if (error) {
         console.error('Failed to load menu:', error.message);
@@ -41,6 +43,8 @@ export function MenuProvider({ children }) {
     }
     fetchMenu();
 
+    // Realtime sync — pushes every insert/update/delete on `meals` to every
+    // subscribed client, so this syncs across devices, not just tabs.
     const channel = supabase
       .channel('meals-changes')
       .on(

@@ -1,4 +1,4 @@
-import { Check, Clock, User, CalendarClock } from 'lucide-react';
+import { Check, Clock, User, CalendarClock, X } from 'lucide-react';
 import { formatBookingDate } from '../../utils/specialBookings';
 import styles from './OrderQueueItem.module.css';
 
@@ -17,9 +17,24 @@ function timeAgo(isoString) {
   return `${hours}h ago`;
 }
 
-export default function OrderQueueItem({ order, onConfirm }) {
+export default function OrderQueueItem({ order, onConfirm, onRevoke }) {
   const isPending = order.status === 'pending';
+  const isConfirmed = order.status === 'confirmed';
   const isSpecial = order.orderType === 'special';
+
+  // Only pending/confirmed orders can be revoked — an acknowledged order
+  // has already been paid for, so undoing that needs a refund
+  // conversation with the customer, not a same-click cancel.
+  const canRevoke = isPending || isConfirmed;
+
+  function handleRevoke() {
+    const message = isConfirmed
+      ? "This order is already confirmed — the customer may be expecting it. Revoke anyway?"
+      : "Revoke this order?";
+    if (window.confirm(message)) {
+      onRevoke(order.id);
+    }
+  }
 
   return (
     <div className={`${styles.card} ${styles[order.status] || ''} ${isSpecial ? styles.special : ''}`}>
@@ -62,11 +77,21 @@ export default function OrderQueueItem({ order, onConfirm }) {
         <span className={styles.total}>₦{order.total.toLocaleString()}</span>
       </div>
 
-      {isPending && (
-        <button type="button" className={styles.confirmButton} onClick={() => onConfirm(order.id)}>
-          <Check size={16} strokeWidth={2.5} />
-          Confirm order
-        </button>
+      {(isPending || canRevoke) && (
+        <div className={styles.actionRow}>
+          {isPending && (
+            <button type="button" className={styles.confirmButton} onClick={() => onConfirm(order.id)}>
+              <Check size={16} strokeWidth={2.5} />
+              Confirm order
+            </button>
+          )}
+          {canRevoke && (
+            <button type="button" className={styles.revokeButton} onClick={handleRevoke}>
+              <X size={16} strokeWidth={2.5} />
+              Revoke
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

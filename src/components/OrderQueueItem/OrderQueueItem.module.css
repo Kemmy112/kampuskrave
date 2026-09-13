@@ -151,3 +151,33 @@
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(193, 68, 14, 0.28);
 }
+
+.actionRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.actionRow .confirmButton {
+  flex: 1;
+}
+
+.revokeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(179, 38, 30, 0.3);
+  background: #FFF5F3;
+  color: #B3261E;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.revokeButton:hover {
+  background: #FFE4DF;
+}

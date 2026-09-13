@@ -30,7 +30,7 @@ function getGreeting() {
 export default function ChefDashboard({ chefName = 'Chef' }) {
   const navigate = useNavigate();
   const { menu, addMenuItem, updateMenuItem, removeMenuItem, toggleStatus, isMenuStale, retainMenuForToday, clearMenu } = useMenu();
-  const { orders, confirmOrder } = useOrders();
+  const { orders, confirmOrder, revokeOrder } = useOrders();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -134,6 +134,11 @@ async function handleClearMenu() {
         </div>
        <div className={styles.headerActions}>
   <NotificationBell role="chef" />
+  {menu.length > 0 && !isMenuStale && (
+    <button type="button" className={styles.signOutButton} onClick={handleCloseKitchen}>
+      Close for today
+    </button>
+  )}
   {menu.length > 0 && (
     <button type="button" className={styles.addButton} onClick={openCatalog}>
       <Plus size={18} strokeWidth={2.5} />
@@ -206,7 +211,7 @@ async function handleClearMenu() {
         ) : (
           <div className={styles.ordersList}>
             {activeOrders.map((order) => (
-              <OrderQueueItem key={order.id} order={order} onConfirm={confirmOrder} />
+              <OrderQueueItem key={order.id} order={order} onConfirm={confirmOrder} onRevoke={revokeOrder} />
             ))}
           </div>
         )}

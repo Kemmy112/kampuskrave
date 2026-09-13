@@ -136,9 +136,7 @@ export default function CustomerDashboard() {
 
   // Dashboard only shows recent activity — anything older than 24h rolls
   // off onto the dedicated Orders page instead of piling up here.
-  const orders = myOrders
-  .filter((o) => isToday(o.createdAt))
-  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));const orders = myOrders
+const orders = myOrders
   .filter((o) => {
     if (o.status === 'pending' || o.status === 'confirmed') return true;
     return isToday(o.createdAt);
