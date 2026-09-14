@@ -98,7 +98,7 @@ export default function AuthPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ChefHat size={20} />
           <span className="font-mono" style={{ fontSize: 12, letterSpacing: 0.5 }}>
-            E's Signature Food App
+            KampusKrave Food App
           </span>
         </div>
 
