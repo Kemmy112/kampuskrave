@@ -130,22 +130,32 @@ export default function CustomerDashboard() {
   );
 
   // Live orders, shared with ChefDashboard via OrderContext.
-  const { orders: contextOrders, addOrderItem, addSpecialOrderItem, acknowledgeOrder } = useOrders();
+  const {
+    orders: contextOrders,
+    loading: ordersLoading,
+    addOrderItem,
+    addSpecialOrderItem,
+    acknowledgeOrder,
+  } = useOrders();
 
   const myOrders = contextOrders.filter((o) => o.customerId === customerId);
 
-  // Dashboard only shows recent activity — anything older than 24h rolls
+  // Dashboard only shows recent activity — anything older than today rolls
   // off onto the dedicated Orders page instead of piling up here.
-const orders = myOrders
-  .filter((o) => {
-    if (o.status === 'pending' || o.status === 'confirmed') return true;
-    return isToday(o.createdAt);
-  })
-  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const orders = myOrders
+    .filter((o) => {
+      if (o.status === "pending" || o.status === "confirmed") return true;
+      return isToday(o.createdAt);
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const firstTime = !contextOrders.some(
-    (o) => o.customerId === customerId && (o.status === "confirmed" || o.status === "acknowledged")
-  );
+  // First-time = this customer has never placed a non-revoked order.
+  // Uses the FULL order history (myOrders), never the day-filtered `orders`
+  // list above, and waits for orders to finish loading so the banner never
+  // flashes on for returning customers. This mirrors the database trigger
+  // that actually grants the discount.
+  const firstTime =
+    !ordersLoading && !myOrders.some((o) => o.status !== "revoked");
 
   // orderingDish is whichever dish the customer just tapped "order" on —
   // its category decides which modal renders below.

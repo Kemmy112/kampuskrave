@@ -6,7 +6,11 @@ const OrderContext = createContext(null);
 
 const REVOKE_AFTER_MS = 4 * 60 * 60 * 1000; // 4 hours
 const DELIVERY_WINDOW_MS = 90 * 60 * 1000; // 90 minutes
-const FIRST_ORDER_DISCOUNT = 0.3;
+
+// NOTE: The 30% first-order discount is now decided by the database
+// (trigger `trg_set_first_order`). The client never decides eligibility —
+// it just sends the undiscounted subtotal and reads back the row Supabase
+// returns, which carries the authoritative is_first_order / discount / total.
 
 function rowToOrder(row) {
   return {
@@ -29,9 +33,20 @@ function rowToOrder(row) {
 
 function computeTotals(items, isFirstOrder) {
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const discount = isFirstOrder ? subtotal * FIRST_ORDER_DISCOUNT : 0;
+  const discount = isFirstOrder ? subtotal * 0.3 : 0;
   const total = subtotal - discount;
   return { subtotal, discount, total };
+}
+
+// Inserts an order. If two inserts race and the unique index rejects one
+// (Postgres error 23505), retry once — the trigger will then see the other
+// order and correctly mark this one as not-first.
+async function insertOrder(payload) {
+  let result = await supabase.from('orders').insert(payload).select().single();
+  if (result.error && result.error.code === '23505') {
+    result = await supabase.from('orders').insert(payload).select().single();
+  }
+  return result;
 }
 
 export function OrderProvider({ children }) {
@@ -116,15 +131,6 @@ export function OrderProvider({ children }) {
     return () => clearInterval(interval);
   }, []);
 
-  function isFirstOrderFor(customerId, allOrders) {
-    return !allOrders.some(
-      (o) =>
-        o.customerId === customerId &&
-        o.status !== 'revoked' &&
-        (o.status === 'confirmed' || o.status === 'acknowledged' || o.isFirstOrder)
-    );
-  }
-
   function mergeItems(existingItems, menuItem, quantity) {
     const lineIndex = existingItems.findIndex((i) => i.menuItemId === menuItem.id);
     if (lineIndex === -1) {
@@ -165,25 +171,21 @@ export function OrderProvider({ children }) {
       return;
     }
 
-    const isFirstOrder = isFirstOrderFor(customerId, prev);
     const items = [
       { menuItemId: menuItem.id, name: menuItem.name, price: menuItem.price, quantity },
     ];
-    const totals = computeTotals(items, isFirstOrder);
-    const { data, error } = await supabase
-      .from('orders')
-      .insert({
-        customer_id: customerId,
-        customer_name: customerName,
-        items,
-        status: 'pending',
-        order_type: 'immediate',
-        requested_date: null,
-        is_first_order: isFirstOrder,
-        ...totals,
-      })
-      .select()
-      .single();
+    // Undiscounted totals; the database trigger applies the first-order discount.
+    const totals = computeTotals(items, false);
+    const { data, error } = await insertOrder({
+      customer_id: customerId,
+      customer_name: customerName,
+      items,
+      status: 'pending',
+      order_type: 'immediate',
+      requested_date: null,
+      is_first_order: false,
+      ...totals,
+    });
     if (error) {
       console.error('Failed to create order:', error.message);
       return;
@@ -222,25 +224,21 @@ export function OrderProvider({ children }) {
         return;
       }
 
-      const isFirstOrder = isFirstOrderFor(customerId, prev);
       const items = [
         { menuItemId: menuItem.id, name: menuItem.name, price: menuItem.price, quantity },
       ];
-      const totals = computeTotals(items, isFirstOrder);
-      const { data, error } = await supabase
-        .from('orders')
-        .insert({
-          customer_id: customerId,
-          customer_name: customerName,
-          items,
-          status: 'pending',
-          order_type: 'special',
-          requested_date: requestedDate,
-          is_first_order: isFirstOrder,
-          ...totals,
-        })
-        .select()
-        .single();
+      // Undiscounted totals; the database trigger applies the first-order discount.
+      const totals = computeTotals(items, false);
+      const { data, error } = await insertOrder({
+        customer_id: customerId,
+        customer_name: customerName,
+        items,
+        status: 'pending',
+        order_type: 'special',
+        requested_date: requestedDate,
+        is_first_order: false,
+        ...totals,
+      });
       if (error) {
         console.error('Failed to create special order:', error.message);
         return;
